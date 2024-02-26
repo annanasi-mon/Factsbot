@@ -6,10 +6,10 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from fastapi import FastAPI 
 from pydantic import BaseModel
-from app.message_history_db.create_message_history_db import Conversations
-from app.chains.contextualize_chain2 import contextualize_chain
-from app.chains.rag_chain import qa_prompt, format_docs, _combine_documents
-from app.retriever_chroma import build_retriever
+from factsbot.message_history_db.create_message_history_db import Conversations
+from factsbot.chains.contextualize_chain2 import contextualize_chain
+from factsbot.chains.rag_chain import qa_prompt, format_docs, _combine_documents
+from factsbot.retriever_chroma import build_retriever
 from langchain.globals import set_verbose
 from operator import itemgetter
 from langchain.globals import set_debug
