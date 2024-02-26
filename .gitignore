@@ -1,0 +1,9 @@
+# Ignore directories
+__pycache__/
+.venv/
+
+
+# Ignore .env file
+/.env
+
+/tempCodeRunnerFile.py
