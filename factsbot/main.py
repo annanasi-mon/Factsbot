@@ -38,7 +38,7 @@ class ChatConversation(BaseModel):
 
 
 @factsbot.post("/conversation")
-async def conversation(data: chat_conversation):
+async def conversation(data: ChatConversation):
 
     # Enable verbose mode
     set_verbose(True)
