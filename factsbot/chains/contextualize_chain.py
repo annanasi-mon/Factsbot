@@ -19,7 +19,6 @@ Standalone question:"""
 
 contextualize_prompt = PromptTemplate.from_template(contextualize_template)
 
-# contextualize_chain = contextualize_prompt | llm | StrOutputParser()
 
 contextualize_chain = RunnableParallel(
     standalone_question=RunnablePassthrough.assign(

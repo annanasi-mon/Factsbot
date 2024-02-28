@@ -7,15 +7,15 @@ from langchain_openai import ChatOpenAI
 from fastapi import FastAPI 
 from pydantic import BaseModel
 from factsbot.message_history_db.create_message_history_db import Conversations
-from factsbot.chains.contextualize_chain2 import contextualize_chain
+from factsbot.chains.contextualize_chain import contextualize_chain_with_history
 from factsbot.chains.rag_chain import qa_prompt, format_docs, _combine_documents
 from factsbot.retriever_chroma import build_retriever
 from langchain.globals import set_verbose
 from operator import itemgetter
 from langchain.globals import set_debug
+import dotenv
 
 set_debug(True)
-import dotenv
 
 dotenv.load_dotenv()
 
@@ -55,7 +55,7 @@ async def conversation(data: chat_conversation):
         config={"configurable": {"session_id": data.session_id}}
     )
 
-
+    # Defining RAG chain
     rag_chain = {
         "context": itemgetter("standalone_question") | retriever | _combine_documents,
         "question": lambda x: x["standalone_question"],
