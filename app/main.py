@@ -2,12 +2,13 @@ from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+# from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from fastapi import FastAPI 
 from pydantic import BaseModel
 from app.chains.contextualize_chain import contextualize_chain
 from app.chains.rag_chain import qa_prompt, format_docs, combine_documents, rag_chain
+from app.chains.answer_template import answer_prompt
 from langchain.globals import set_verbose
 from langchain.globals import set_debug
 import dotenv
@@ -53,22 +54,6 @@ async def conversation(data: ChatConversation):
     contextualized_question = contextualize_chain_with_history.invoke(
         {"question": data.question},
         config={"configurable": {"session_id": data.session_id}}
-    )
-
-
-    # Define answer template
-    answer_template = """Answer the question based only on the following context:
-    {context}
-
-    Question: {question}
-    """
-
-    # Create ChatPromptTemplate for answer prompt
-    answer_prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", answer_template),
-            ("human", "{question}"),
-        ]
     )
 
     # Define conversational QA chain
