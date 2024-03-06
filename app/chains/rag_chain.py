@@ -1,11 +1,16 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import format_document
+from operator import itemgetter
+from app.retriever_facts_db import build_retriever
 import dotenv
 
 dotenv.load_dotenv()
 
 llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+
+# Create retriever for facts db
+retriever = build_retriever()
 
 qa_system_prompt = """You are an assistant for question-answering tasks. \
 Use the following pieces of retrieved context to answer the question. \
@@ -29,9 +34,16 @@ def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
 
-def _combine_documents(
+def combine_documents(
     docs, document_prompt=DEFAULT_DOCUMENT_PROMPT, document_separator="\n\n"
 ):
     doc_strings = [format_document(doc, document_prompt) for doc in docs]
     return document_separator.join(doc_strings)
+
+
+# Define rag_chain
+rag_chain = {
+    "context": itemgetter("standalone_question") | retriever | combine_documents,
+    "question": lambda x: x["standalone_question"],
+}
 

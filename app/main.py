@@ -6,12 +6,9 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from fastapi import FastAPI 
 from pydantic import BaseModel
-from factsbot.message_history_db.create_message_history_db import Conversations
-from factsbot.chains.contextualize_chain import contextualize_chain
-from factsbot.chains.rag_chain import qa_prompt, format_docs, _combine_documents
-from factsbot.retriever_chroma import build_retriever
+from app.chains.contextualize_chain import contextualize_chain
+from app.chains.rag_chain import qa_prompt, format_docs, combine_documents, rag_chain
 from langchain.globals import set_verbose
-from operator import itemgetter
 from langchain.globals import set_debug
 import dotenv
 
@@ -23,13 +20,11 @@ dotenv.load_dotenv()
 set_debug(True)
 
 # Create FastAPI app instance
-factsbot = FastAPI()
+app = FastAPI()
 
 # Initialize ChatOpenAI instance
 llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, verbose=True)
 
-# Create retriever for chroma db
-retriever = build_retriever()
 
 # Define Pydantic model for chat conversation
 class ChatConversation(BaseModel):
@@ -37,21 +32,19 @@ class ChatConversation(BaseModel):
     session_id: int
 
 
-@factsbot.post("/conversation")
+@app.post("/conversation")
 async def conversation(data: ChatConversation):
 
     # Enable verbose mode
     set_verbose(True)
     
     # Database holding message history
-    history_instance = SQLChatMessageHistory(session_id=data.session_id, connection_string="sqlite:///message_history_db.db")
+    history_instance = SQLChatMessageHistory(session_id=data.session_id, connection_string="sqlite:///app/message_history_db/message_history_db.db")
 
     # Wrapper for the contextualize chain, runnablewithmessagehistory manages message history for contextualize chain
     contextualize_chain_with_history = RunnableWithMessageHistory(
     contextualize_chain,
-    lambda session_id: SQLChatMessageHistory(
-        session_id=data.session_id, connection_string="sqlite:///message_history_db.db"
-    ),
+    lambda session_id: history_instance,
     input_messages_key="question",
     history_messages_key="history", 
     )
@@ -62,12 +55,6 @@ async def conversation(data: ChatConversation):
         config={"configurable": {"session_id": data.session_id}}
     )
 
-    # Define rag_chain
-    rag_chain = {
-        "context": itemgetter("standalone_question") | retriever | _combine_documents,
-        "question": lambda x: x["standalone_question"],
-    }
-
 
     # Define answer template
     answer_template = """Answer the question based only on the following context:
@@ -77,7 +64,7 @@ async def conversation(data: ChatConversation):
     """
 
     # Create ChatPromptTemplate for answer prompt
-    ANSWER_PROMPT = ChatPromptTemplate.from_messages(
+    answer_prompt = ChatPromptTemplate.from_messages(
         [
             ("system", answer_template),
             ("human", "{question}"),
@@ -85,7 +72,7 @@ async def conversation(data: ChatConversation):
     )
 
     # Define conversational QA chain
-    conversational_qa_chain = contextualize_chain_with_history | rag_chain | ANSWER_PROMPT | llm | StrOutputParser()
+    conversational_qa_chain = contextualize_chain_with_history | rag_chain | answer_prompt | llm | StrOutputParser()
 
     # Running conversational QA chain
     answer = conversational_qa_chain.invoke(
@@ -93,13 +80,13 @@ async def conversation(data: ChatConversation):
         config={"configurable": {"session_id": data.session_id}}
     )
 
-    # Add question to the history
-    if data.question:
+    # Add question and answer to the history
+    if data.question and answer:
         history_instance.add_user_message(message=data.question)
-
-    # Add ai message to the history
-    if answer:
         history_instance.add_ai_message(message=answer)
+    else:
+        pass
+        # Wypisanie bledu
     
 
     return {"contextualized_question": contextualized_question, "rag_answer": answer}
