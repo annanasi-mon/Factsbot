@@ -11,6 +11,7 @@ from app.chains.rag_chain import qa_prompt, format_docs, combine_documents, rag_
 from app.chains.answer_template import answer_prompt
 from langchain.globals import set_verbose
 from langchain.globals import set_debug
+import app.settings as settings
 import dotenv
 
 
@@ -24,7 +25,7 @@ set_debug(True)
 app = FastAPI()
 
 # Initialize ChatOpenAI instance
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, verbose=True)
+llm = ChatOpenAI(api_key=settings.OPENAI_API_KEY, model_name=settings.MODEL_NAME, temperature=0, verbose=True)
 
 
 # Define Pydantic model for chat conversation
@@ -40,7 +41,7 @@ async def conversation(data: ChatConversation):
     set_verbose(True)
     
     # Database holding message history
-    history_instance = SQLChatMessageHistory(session_id=data.session_id, connection_string="sqlite:///app/message_history_db/message_history_db.db")
+    history_instance = SQLChatMessageHistory(session_id=data.session_id, connection_string=settings.MESSAGE_HISTORY_DB_DIR)
 
     # Wrapper for the contextualize chain, runnablewithmessagehistory manages message history for contextualize chain
     contextualize_chain_with_history = RunnableWithMessageHistory(
